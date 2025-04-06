@@ -1,20 +1,22 @@
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
+import java.io.*;
 
 public class Main {
     public static void main(String[] args) {
-        List<Hall> halls = new ArrayList<>();
-        List<Event> events = new ArrayList<>();
-        List<Ticket> tickets = new ArrayList<>();
-        CinemaManager cinemaManager = new CinemaManager();
         Scanner scanner = new Scanner(System.in);
+        FileManager fileManager = new FileManager("data.ser");
 
-        halls.add(new Hall(1, 10, 20));
-        halls.add(new Hall(2, 15, 25));
-        halls.add(new Hall(3, 12, 18));
-        halls.add(new Hall(4, 8, 15));
-        halls.add(new Hall(5, 20, 30));
+        CinemaData data = fileManager.loadData();
+        if (data == null) {
+            data = new CinemaData();
+            data.halls.add(new Hall(1, 10, 20));
+            data.halls.add(new Hall(2, 15, 25));
+            data.halls.add(new Hall(3, 12, 18));
+            data.halls.add(new Hall(4, 8, 15));
+            data.halls.add(new Hall(5, 20, 30));
+        }
+
+        CinemaManager cinemaManager = data.cinemaManager;
 
         while (true) {
             System.out.println("\nМеню:");
@@ -22,11 +24,13 @@ public class Main {
             System.out.println("2. Покажи всички представления");
             System.out.println("3. Купи билет");
             System.out.println("4. Покажи всички билети");
-            System.out.println("5. Резервирай място (book)");
-            System.out.println("6. Отмени резервация (unbook)");
-            System.out.println("7. Покажи свободни места (freeseats)");
-            System.out.println("8. Покажи заети места");
-            System.out.println("9. Изход");
+            System.out.println("5. Резервирай място");
+            System.out.println("6. Отмени резервация");
+            System.out.println("7. Свободни места");
+            System.out.println("8. Заети места");
+            System.out.println("9. Запази в файл");
+            System.out.println("10. Изтрий представление");
+            System.out.println("11. Изход");
             System.out.print("Избери опция: ");
 
             int choice = scanner.nextInt();
@@ -34,183 +38,195 @@ public class Main {
 
             switch (choice) {
                 case 1:
-                    System.out.print("Въведете име на представлението: ");
+                    System.out.print("Име на представление: ");
                     String name = scanner.nextLine();
-                    System.out.print("Въведете дата (гггг-мм-дд): ");
+                    System.out.print("Дата (гггг-мм-дд): ");
                     String date = scanner.nextLine();
-                    System.out.print("Въведете номер на залата: ");
+                    System.out.print("Номер на зала: ");
                     int hallNumber = scanner.nextInt();
+                    scanner.nextLine();
 
-                    Hall selectedHall = halls.stream()
+                    Hall hall = data.halls.stream()
                             .filter(h -> h.getHallNumber() == hallNumber)
                             .findFirst()
                             .orElse(null);
-
-                    if (selectedHall != null) {
-                        events.add(new Event(name, date, selectedHall));
-                        System.out.println("Представлението е добавено успешно!");
+                    if (hall != null) {
+                        data.events.add(new Event(name, date, hall));
+                        System.out.println("Успешно добавено.");
                     } else {
-                        System.out.println("Зала с този номер не е намерена.");
+                        System.out.println("Няма такава зала.");
                     }
                     break;
 
                 case 2:
-                    if (events.isEmpty()) {
-                        System.out.println("Няма добавени представления.");
+                    if (data.events.isEmpty()) {
+                        System.out.println("Няма представления.");
                     } else {
-                        events.forEach(System.out::println);
+                        data.events.forEach(System.out::println);
                     }
                     break;
 
                 case 3:
-                    System.out.print("Въведете дата на представлението: ");
-                    String ticketDate = scanner.nextLine();
-                    System.out.print("Въведете име на представлението: ");
-                    String ticketName = scanner.nextLine();
-
-                    Event ticketEvent = findEvent(events, ticketDate, ticketName);
-                    if (ticketEvent == null) {
-                        System.out.println("Представлението не е намерено.");
+                    System.out.print("Дата: ");
+                    String tDate = scanner.nextLine();
+                    System.out.print("Име: ");
+                    String tName = scanner.nextLine();
+                    Event event = findEvent(data.events, tDate, tName);
+                    if (event == null) {
+                        System.out.println("Не е намерено.");
                         break;
                     }
-
-                    System.out.print("Въведете ред: ");
+                    System.out.print("Ред: ");
                     int row = scanner.nextInt();
-                    System.out.print("Въведете място: ");
+                    System.out.print("Място: ");
                     int seat = scanner.nextInt();
+                    scanner.nextLine();
 
-                    final Event finalTicketEvent = ticketEvent;
-                    final int finalRow = row;
-                    final int finalSeat = seat;
+                    boolean taken = data.tickets.stream().anyMatch(t ->
+                            t.getEvent().equals(event) && t.getRow() == row && t.getSeat() == seat)
+                            || cinemaManager.isSeatTaken(row, seat, event);
 
-                    boolean isSeatAvailable = cinemaManager.isSeatFree(finalRow, finalSeat, finalTicketEvent) &&
-                            tickets.stream().noneMatch(t ->
-                                    t.getEvent().equals(finalTicketEvent) &&
-                                            t.getRow() == finalRow &&
-                                            t.getSeat() == finalSeat);
-
-                    if (isSeatAvailable) {
-                        String ticketCode = "TICKET-" + System.currentTimeMillis();
-                        tickets.add(new Ticket(ticketCode, row, seat, ticketEvent));
-                        System.out.println("Билетът е закупен успешно! Код: " + ticketCode);
+                    if (!taken) {
+                        String code = "TICKET-" + System.currentTimeMillis();
+                        data.tickets.add(new Ticket(code, row, seat, event));
+                        System.out.println("Купен билет. Код: " + code);
                     } else {
                         System.out.println("Мястото е заето.");
                     }
                     break;
 
                 case 4:
-                    if (tickets.isEmpty()) {
-                        System.out.println("Няма закупени билети.");
+                    if (data.tickets.isEmpty()) {
+                        System.out.println("Няма билети.");
                     } else {
-                        tickets.forEach(System.out::println);
+                        data.tickets.forEach(System.out::println);
                     }
                     break;
 
                 case 5:
-                    System.out.print("Въведете дата на представлението: ");
-                    String bookDate = scanner.nextLine();
-                    System.out.print("Въведете име на представлението: ");
-                    String bookName = scanner.nextLine();
-
-                    Event bookEvent = findEvent(events, bookDate, bookName);
+                    System.out.print("Дата: ");
+                    String bDate = scanner.nextLine();
+                    System.out.print("Име: ");
+                    String bName = scanner.nextLine();
+                    Event bookEvent = findEvent(data.events, bDate, bName);
                     if (bookEvent == null) {
-                        System.out.println("Представлението не е намерено.");
+                        System.out.println("Не е намерено.");
                         break;
                     }
-
-                    System.out.print("Въведете ред: ");
-                    int bookRow = scanner.nextInt();
-                    System.out.print("Въведете място: ");
-                    int bookSeat = scanner.nextInt();
+                    System.out.print("Ред: ");
+                    int bRow = scanner.nextInt();
+                    System.out.print("Място: ");
+                    int bSeat = scanner.nextInt();
                     scanner.nextLine();
-                    System.out.print("Въведете бележка: ");
+                    System.out.print("Бележка: ");
                     String note = scanner.nextLine();
 
-                    final Event finalBookEvent = bookEvent;
-                    final int finalBookRow = bookRow;
-                    final int finalBookSeat = bookSeat;
+                    boolean free = data.tickets.stream().noneMatch(t -> t.getEvent().equals(bookEvent)
+                            && t.getRow() == bRow && t.getSeat() == bSeat)
+                            && cinemaManager.isSeatFree(bRow, bSeat, bookEvent);
 
-                    boolean isSeatFree = cinemaManager.isSeatFree(finalBookRow, finalBookSeat, finalBookEvent) &&
-                            tickets.stream().noneMatch(t ->
-                                    t.getEvent().equals(finalBookEvent) &&
-                                            t.getRow() == finalBookRow &&
-                                            t.getSeat() == finalBookSeat);
-
-                    if (isSeatFree) {
-                        cinemaManager.addReservation(new Reservation(bookRow, bookSeat, bookEvent, note));
-                        System.out.println("Мястото е резервирано успешно!");
+                    if (free) {
+                        cinemaManager.addReservation(new Reservation(bRow, bSeat, bookEvent, note));
+                        System.out.println("Резервация успешна.");
                     } else {
                         System.out.println("Мястото е заето.");
                     }
                     break;
 
                 case 6:
-                    System.out.print("Въведете дата на представлението: ");
-                    String unbookDate = scanner.nextLine();
-                    System.out.print("Въведете име на представлението: ");
-                    String unbookName = scanner.nextLine();
-                    System.out.print("Въведете ред: ");
-                    int unbookRow = scanner.nextInt();
-                    System.out.print("Въведете място: ");
-                    int unbookSeat = scanner.nextInt();
-
-                    cinemaManager.cancelReservation(unbookDate, unbookName, unbookRow, unbookSeat);
+                    System.out.print("Дата: ");
+                    String uDate = scanner.nextLine();
+                    System.out.print("Име: ");
+                    String uName = scanner.nextLine();
+                    System.out.print("Ред: ");
+                    int uRow = scanner.nextInt();
+                    System.out.print("Място: ");
+                    int uSeat = scanner.nextInt();
+                    scanner.nextLine();
+                    cinemaManager.cancelReservation(uDate, uName, uRow, uSeat);
                     break;
 
                 case 7:
-                    System.out.print("Въведете дата на представлението: ");
-                    String freeSeatsDate = scanner.nextLine();
-                    System.out.print("Въведете име на представлението: ");
-                    String freeSeatsName = scanner.nextLine();
-
-                    Event freeSeatsEvent = findEvent(events, freeSeatsDate, freeSeatsName);
-                    if (freeSeatsEvent == null) {
-                        System.out.println("Представлението не е намерено.");
+                    System.out.print("Дата: ");
+                    String fDate = scanner.nextLine();
+                    System.out.print("Име: ");
+                    String fName = scanner.nextLine();
+                    Event foundEvent = findEvent(data.events, fDate, fName);
+                    if (foundEvent == null) {
+                        System.out.println("Не е намерено.");
                         break;
                     }
-
-                    System.out.println("Свободни места за " + freeSeatsEvent.getName() + " на " + freeSeatsEvent.getDate() + ":");
-                    Hall freeSeatsHall = freeSeatsEvent.getHall();
-                    final Event finalFreeSeatsEvent = freeSeatsEvent;
-
-                    for (int i = 1; i <= freeSeatsHall.getRows(); i++) {
-                        final int currentRow = i;
-                        for (int j = 1; j <= freeSeatsHall.getSeatsPerRow(); j++) {
+                    Hall h = foundEvent.getHall();
+                    for (int i = 1; i <= h.getRows(); i++) {
+                        for (int j = 1; j <= h.getSeatsPerRow(); j++) {
+                            final int currentRow = i;
                             final int currentSeat = j;
-                            boolean isTaken = cinemaManager.isSeatTaken(currentRow, currentSeat, finalFreeSeatsEvent) ||
-                                    tickets.stream().anyMatch(t ->
-                                            t.getEvent().equals(finalFreeSeatsEvent) &&
-                                                    t.getRow() == currentRow &&
-                                                    t.getSeat() == currentSeat);
+                            boolean busy = cinemaManager.isSeatTaken(currentRow, currentSeat, foundEvent)
+                                    || data.tickets.stream().anyMatch(t -> t.getEvent().equals(foundEvent)
+                                    && t.getRow() == currentRow && t.getSeat() == currentSeat);
 
-                            if (!isTaken) {
-                                System.out.println("Ред " + currentRow + ", Място " + currentSeat);
+                            if (!busy) {
+                                System.out.println("Ред " + i + ", Място " + j);
                             }
                         }
                     }
                     break;
 
                 case 8:
-                    System.out.print("Въведете дата на представлението: ");
-                    String occupiedDate = scanner.nextLine();
-                    System.out.print("Въведете име на представлението: ");
-                    String occupiedName = scanner.nextLine();
+                    System.out.print("Дата: ");
+                    String oDate = scanner.nextLine();
+                    System.out.print("Име: ");
+                    String oName = scanner.nextLine();
+                    Event oEvent = findEvent(data.events, oDate, oName);
+                    if (oEvent != null) {
+                        cinemaManager.printOccupiedSeats(oEvent);
+                    } else {
+                        System.out.println("Не е намерено.");
+                    }
+                    break;
 
-                    Event occupiedEvent = findEvent(events, occupiedDate, occupiedName);
-                    if (occupiedEvent != null) {
-                        cinemaManager.printOccupiedSeats(occupiedEvent);
+                case 9:
+                    fileManager.saveData(data);
+                    System.out.println("Данните са записани.");
+                    break;
+
+                case 10:
+                    System.out.print("Дата на представлението за изтриване: ");
+                    String delDate = scanner.nextLine();
+                    System.out.print("Име на представлението за изтриване: ");
+                    String delName = scanner.nextLine();
+
+                    Event eventToRemove = findEvent(data.events, delDate, delName);
+                    if (eventToRemove != null) {
+                        System.out.print("Сигурни ли сте, че искате да изтриете \"" + delName + "\"? (y/n): ");
+                        String confirm = scanner.nextLine();
+
+                        if (confirm.equalsIgnoreCase("y")) {
+                            data.tickets.removeIf(ticket -> ticket.getEvent().equals(eventToRemove));
+                            cinemaManager.getAllReservations().removeIf(res -> res.getEvent().equals(eventToRemove));
+                            data.events.remove(eventToRemove);
+                            System.out.println("Представлението е изтрито успешно!");
+                        } else {
+                            System.out.println("Изтриването е отменено.");
+                        }
                     } else {
                         System.out.println("Представлението не е намерено.");
                     }
                     break;
 
-                case 9:
+                case 11:
+                    System.out.print("Запазване на промените преди изход? (y/n): ");
+                    String saveChoice = scanner.nextLine();
+                    if (saveChoice.equalsIgnoreCase("y")) {
+                        fileManager.saveData(data);
+                        System.out.println("Данните са запазени успешно!");
+                    }
                     System.out.println("Излизане от програмата...");
                     scanner.close();
                     return;
 
                 default:
-                    System.out.println("Невалидна опция. Моля, опитайте отново.");
+                    System.out.println("Невалидна опция.");
             }
         }
     }
