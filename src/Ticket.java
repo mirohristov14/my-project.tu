@@ -1,4 +1,8 @@
-public class Ticket {
+import java.io.Serializable;
+
+public class Ticket implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private String code;
     private int row;
     private int seat;
@@ -11,24 +15,14 @@ public class Ticket {
         this.event = event;
     }
 
-    public String getCode() {
-        return code;
-    }
-
-    public int getRow() {
-        return row;
-    }
-
-    public int getSeat() {
-        return seat;
-    }
-
-    public Event getEvent() {
-        return event;
-    }
+    public String getCode() { return code; }
+    public int getRow() { return row; }
+    public int getSeat() { return seat; }
+    public Event getEvent() { return event; }
 
     @Override
     public String toString() {
-        return "Билет " + code + ": Ред " + row + ", Място " + seat + " за " + event.getName() + " на " + event.getDate();
+        return "Билет " + code + ": Ред " + row + ", Място " + seat +
+                " за " + event.getName() + " на " + event.getDate();
     }
 }
