@@ -1,7 +1,10 @@
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CinemaManager {
+public class CinemaManager implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private List<Reservation> reservations;
 
     public CinemaManager() {
@@ -13,18 +16,18 @@ public class CinemaManager {
     }
 
     public boolean isSeatTaken(int row, int seat, Event event) {
-        return reservations.stream()
-                .anyMatch(res -> res.getRow() == row
-                        && res.getSeat() == seat
-                        && res.getEvent().equals(event));
+        return reservations.stream().anyMatch(res ->
+                res.getRow() == row &&
+                        res.getSeat() == seat &&
+                        res.getEvent().equals(event));
     }
 
     public void cancelReservation(String date, String eventName, int row, int seat) {
         boolean removed = reservations.removeIf(res ->
-                res.getEvent().getDate().equals(date)
-                        && res.getEvent().getName().equals(eventName)
-                        && res.getRow() == row
-                        && res.getSeat() == seat);
+                res.getEvent().getDate().equals(date) &&
+                        res.getEvent().getName().equals(eventName) &&
+                        res.getRow() == row &&
+                        res.getSeat() == seat);
 
         if (removed) {
             System.out.println("Резервацията е отменена успешно!");
