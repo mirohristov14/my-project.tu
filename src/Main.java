@@ -30,7 +30,10 @@ public class Main {
             System.out.println("8. Заети места");
             System.out.println("9. Запази в файл");
             System.out.println("10. Изтрий представление");
-            System.out.println("11. Изход");
+            System.out.println("11. Генерирай справка за продажби");
+            System.out.println("12. Покажи всички резервации");
+            System.out.println("13. Провери билет по код");
+            System.out.println("14. Изход");
             System.out.print("Избери опция: ");
 
             int choice = scanner.nextInt();
@@ -50,9 +53,14 @@ public class Main {
                             .filter(h -> h.getHallNumber() == hallNumber)
                             .findFirst()
                             .orElse(null);
-                    if (hall != null) {
+                    boolean exists = data.events.stream()
+                            .anyMatch(e -> e.getDate().equals(date) && e.getHall().getHallNumber() == hallNumber);
+
+                    if (hall != null && !exists) {
                         data.events.add(new Event(name, date, hall));
                         System.out.println("Успешно добавено.");
+                    } else if (exists) {
+                        System.out.println("В тази зала вече има представление на тази дата.");
                     } else {
                         System.out.println("Няма такава зала.");
                     }
@@ -87,7 +95,7 @@ public class Main {
                             || cinemaManager.isSeatTaken(row, seat, event);
 
                     if (!taken) {
-                        String code = "TICKET-" + System.currentTimeMillis();
+                        String code = generateTicketCode(event, row, seat);
                         data.tickets.add(new Ticket(code, row, seat, event));
                         System.out.println("Купен билет. Код: " + code);
                     } else {
@@ -215,6 +223,56 @@ public class Main {
                     break;
 
                 case 11:
+                    System.out.print("Начална дата (гггг-мм-дд): ");
+                    String from = scanner.nextLine();
+                    System.out.print("Крайна дата (гггг-мм-дд): ");
+                    String to = scanner.nextLine();
+                    System.out.print("Номер на зала (празно за всички): ");
+                    String hallInput = scanner.nextLine();
+
+                    String finalFrom = from;
+                    String finalTo = to;
+                    String finalHallInput = hallInput;
+                    CinemaData finalData = data;
+
+                    finalData.events.stream()
+                            .filter(e -> (e.getDate().compareTo(finalFrom) >= 0 && e.getDate().compareTo(finalTo) <= 0))
+                            .filter(e -> (finalHallInput.isEmpty() || Integer.parseInt(finalHallInput) == e.getHall().getHallNumber()))
+                            .forEach(e -> {
+                                long sold = finalData.tickets.stream()
+                                        .filter(t -> t.getEvent().equals(e))
+                                        .count();
+                                System.out.println(e.getName() + " на " + e.getDate() + " - Продадени билети: " + sold);
+                            });
+                    break;
+
+                case 12:
+                    System.out.print("Дата (празно за всички): ");
+                    String dateFilter = scanner.nextLine();
+                    System.out.print("Име на представление (празно за всички): ");
+                    String nameFilter = scanner.nextLine();
+
+                    data.cinemaManager.getAllReservations().stream()
+                            .filter(r -> (dateFilter.isEmpty() || r.getEvent().getDate().equals(dateFilter)) &&
+                                    (nameFilter.isEmpty() || r.getEvent().getName().equals(nameFilter)))
+                            .forEach(System.out::println);
+                    break;
+
+                case 13:
+                    System.out.print("Въведи код на билет: ");
+                    String code = scanner.nextLine();
+                    Optional<Ticket> ticket = data.tickets.stream()
+                            .filter(t -> t.getCode().equals(code))
+                            .findFirst();
+                    if (ticket.isPresent()) {
+                        Ticket t = ticket.get();
+                        System.out.println("Билетът е валиден: Ред " + t.getRow() + ", Място " + t.getSeat());
+                    } else {
+                        System.out.println("Невалиден код на билет!");
+                    }
+                    break;
+
+                case 14:
                     System.out.print("Запазване на промените преди изход? (y/n): ");
                     String saveChoice = scanner.nextLine();
                     if (saveChoice.equalsIgnoreCase("y")) {
@@ -236,5 +294,9 @@ public class Main {
                 .filter(e -> e.getDate().equals(date) && e.getName().equals(name))
                 .findFirst()
                 .orElse(null);
+    }
+
+    private static String generateTicketCode(Event event, int row, int seat) {
+        return "T-" + event.getDate().replace("-", "") + "-" + row + "-" + seat + "-" + System.currentTimeMillis();
     }
 }
