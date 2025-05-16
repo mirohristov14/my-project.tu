@@ -1,6 +1,31 @@
 import java.util.*;
 import java.io.*;
 
+/**
+ * Главен клас на системата за управление на кино.
+ * <p>
+ * Този клас съдържа основния метод {@code main}, който стартира конзолното приложение,
+ * приема и обработва команди от потребителя. Командите позволяват работа с файлове
+ * (open, save, saveas, close), както и операции свързани с киното (add_event, show_events,
+ * buy_ticket, reserve_ticket, cancel_reservation и др.).
+ * </p>
+ *
+ * <p>
+ * Поддържани основни команди:
+ * <ul>
+ *     <li><b>open &lt;filename&gt;</b> – отваря файл със записани събития</li>
+ *     <li><b>save</b> – записва текущите данни във вече отворен файл</li>
+ *     <li><b>saveas &lt;filename&gt;</b> – записва текущите данни в нов файл</li>
+ *     <li><b>close</b> – затваря текущия файл</li>
+ *     <li><b>help</b> – показва списък с поддържаните команди</li>
+ *     <li><b>exit</b> – излиза от програмата</li>
+ *     <li><b>add_event</b>, <b>show_events</b>, <b>buy_ticket</b>, <b>reserve_ticket</b>,
+ *         <b>cancel_reservation</b> и др. – специфични за управлението на киното</li>
+ * </ul>
+ * </p>
+ *
+ * @param args аргументи от командния ред (не се използват)
+ */
 public class Main {
     private static CinemaData data;
     private static FileManager fileManager;
@@ -53,7 +78,6 @@ public class Main {
         }
         scanner.close();
     }
-
     private static void open(String command) {
         if (fileOpened) {
             System.out.println("Вече има отворен файл. Моля, първо го затворете с 'close'.");
